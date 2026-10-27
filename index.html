@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Prep Log">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1119" media="(prefers-color-scheme: dark)">
+<title>Prep Log</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232450d0'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='700' text-anchor='middle' fill='white'%3E%C3%97%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout: one narrow column like a training notebook; segmented tabs (Sprint / Week / Progress) stick to the top. */
+:root {
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --ink: #142033;
+  --muted: #5b6779;
+  --line: #d6dce6;
+  --accent: #2450d0;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3eafc;
+  --warn: #c2410c;
+  --good: #157f4f;
+  --easy: #0e8a7b;
+  --med: #a8670f;
+  --hard: #c53030;
+  --grid: #e4e8ef;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1119; --surface: #141b27; --ink: #e7ecf4; --muted: #95a2b6; --line: #263044;
+    --accent: #7ea2ff; --accent-ink: #0c1119; --accent-soft: #1c2945; --warn: #f59e5b; --good: #52c98a;
+    --easy: #3cc9b7; --med: #e6b450; --hard: #f07171; --grid: #1d2533; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+[hidden] { display: none !important; }
+.wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 20px; }
+header.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-block: 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.brand { font-family: var(--f-display); font-weight: 800; font-size: 20px; letter-spacing: -0.01em; }
+.brand small { font-family: var(--f-mono); font-weight: 400; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; margin-left: 8px; text-transform: uppercase; }
+.brand small.warn { color: var(--warn); }
+nav.tabs { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+nav.tabs a { font-weight: 700; font-size: 14px; color: var(--muted); text-decoration: none; padding: 6px 14px; border-radius: 7px; }
+nav.tabs a[aria-current="page"] { background: var(--accent); color: var(--accent-ink); }
+nav.tabs a:focus-visible, button:focus-visible, input:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h2 { font-family: var(--f-display); font-weight: 800; font-size: 22px; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h3 { font-family: var(--f-mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+section.view { display: grid; gap: 18px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+button {
+  font: inherit; font-weight: 700; cursor: pointer; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); padding: 9px 16px;
+}
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.ghost { background: transparent; }
+button:disabled { opacity: 0.5; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.spread { justify-content: space-between; }
+.note { font-size: 13px; color: var(--muted); }
+.note.ok { color: var(--good); }
+.note.bad { color: var(--warn); }
+
+/* ---------- Sprint ---------- */
+.hero-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.stat { display: grid; gap: 2px; }
+.stat b { font-family: var(--f-mono); font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat span { font-size: 12px; color: var(--muted); }
+.start-btn { font-size: 18px; padding: 14px 20px; width: 100%; }
+details.settings summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 14px; }
+.settings-grid { display: grid; gap: 12px; margin-top: 12px; }
+.op-line { display: grid; grid-template-columns: 130px 1fr; gap: 8px; align-items: center; }
+.op-line label { display: flex; gap: 6px; align-items: center; font-weight: 700; }
+.range { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+.range input { width: 58px; }
+input[type="number"], input[type="text"], input[type="password"], select {
+  font: inherit; font-family: var(--f-mono); background: var(--bg); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 9px; min-width: 0; width: 100%;
+}
+.range input[type="number"] { width: 62px; }
+.std-tag { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.std-tag.off { background: var(--grid); color: var(--muted); }
+
+.run { display: grid; gap: 18px; }
+.run-head { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--f-mono); }
+.run-head .clock { font-size: 22px; font-weight: 700; }
+.run-head .clock.low { color: var(--warn); }
+.run-head .score { font-size: 15px; color: var(--muted); }
+.run-head .score b { color: var(--ink); font-size: 22px; }
+.bar { height: 4px; background: var(--grid); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); width: 100%; transform-origin: left; }
+.problem { font-family: var(--f-mono); font-weight: 700; font-size: clamp(40px, 12vw, 64px); text-align: center; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; padding-block: 10px; }
+#ans {
+  font-family: var(--f-mono); font-size: 34px; font-weight: 700; text-align: center; width: 100%; padding: 12px;
+  border-radius: 12px; border: 2px solid var(--line); background: var(--bg); color: var(--ink);
+}
+#ans:focus { border-color: var(--accent); outline: none; }
+.result-score { font-family: var(--f-mono); font-size: 64px; font-weight: 700; line-height: 1; }
+.oprow { display: grid; grid-template-columns: 28px 1fr 64px 46px; gap: 10px; align-items: center; font-family: var(--f-mono); font-size: 14px; }
+.oprow .sym { font-weight: 700; font-size: 18px; text-align: center; }
+.oprow .track { height: 10px; background: var(--grid); border-radius: 5px; overflow: hidden; }
+.oprow .track i { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
+.oprow.slow .track i { background: var(--warn); }
+.oprow .n { color: var(--muted); text-align: right; }
+
+/* ---------- Week ---------- */
+.week-head { display: grid; gap: 4px; }
+.week-nav { display: flex; gap: 8px; align-items: center; }
+.week-nav button { padding: 6px 12px; }
+.progress-line { display: flex; align-items: center; gap: 10px; font-family: var(--f-mono); font-size: 13px; color: var(--muted); }
+.progress-line .bar { flex: 1; height: 8px; border-radius: 4px; }
+.progress-line .bar i { background: var(--good); }
+ul.probs { list-style: none; margin: 0; padding: 0; display: grid; }
+ul.probs li { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; padding: 11px 0; border-top: 1px solid var(--line); }
+ul.probs li:first-child { border-top: 0; }
+.tick { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line); background: transparent; padding: 0; display: grid; place-items: center; color: var(--accent-ink); }
+.tick.on, .tick.synced { background: var(--good); border-color: var(--good); }
+.tick.synced { cursor: default; opacity: 1; }
+.tick svg { width: 14px; height: 14px; }
+.ptitle { min-width: 0; display: grid; gap: 2px; }
+.ptitle a { color: var(--ink); font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.ptitle a:hover { text-decoration: underline; }
+.ptitle .meta { font-size: 12px; color: var(--muted); font-family: var(--f-mono); }
+.chip { font-family: var(--f-mono); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.d1 { color: var(--easy); } .d2 { color: var(--med); } .d3 { color: var(--hard); }
+li.done .ptitle a { color: var(--muted); }
+.callout { border-left: 3px solid var(--warn); padding: 8px 12px; background: var(--grid); border-radius: 0 8px 8px 0; font-size: 14px; }
+
+/* ---------- Progress ---------- */
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.tile .big { font-family: var(--f-mono); font-size: 30px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile .sub { font-size: 12px; color: var(--muted); }
+.emh { display: flex; gap: 8px; font-family: var(--f-mono); font-size: 12px; flex-wrap: wrap; }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-family: var(--f-mono); font-size: 11px; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .target { stroke: var(--warn); stroke-width: 1; stroke-dasharray: 4 4; }
+.chart .line { fill: none; stroke: var(--accent); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+.chart .area { fill: var(--accent-soft); stroke: none; }
+.chart .dot { fill: var(--accent); }
+.chart .last { fill: var(--surface); stroke: var(--accent); stroke-width: 2.5; }
+table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.list td { padding: 8px 0; border-top: 1px solid var(--line); vertical-align: top; }
+table.list td.r { text-align: right; font-family: var(--f-mono); white-space: nowrap; padding-left: 10px; }
+.up { color: var(--good); } .down { color: var(--hard); }
+.sync-line { font-size: 12px; color: var(--muted); font-family: var(--f-mono); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.form-grid label, label.field { display: grid; gap: 4px; font-size: 13px; font-weight: 700; }
+.empty { color: var(--muted); font-size: 14px; }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+code { font-family: var(--f-mono); font-size: 0.92em; background: var(--grid); padding: 1px 5px; border-radius: 4px; }
+
+@media (max-width: 560px) {
+  .tiles { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .op-line { grid-template-columns: 1fr; }
+  nav.tabs a { padding: 6px 10px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">Prep Log<small id="badge">loading…</small></div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#sprint" data-view="sprint">Sprint</a>
+      <a href="#week" data-view="week">Week</a>
+      <a href="#progress" data-view="progress">Progress</a>
+    </nav>
+  </header>
+
+  <!-- SPRINT -->
+  <section class="view" id="view-sprint">
+    <div class="panel" id="sprintIdle">
+      <div class="row spread">
+        <h2>Arithmetic sprint</h2>
+        <span class="std-tag" id="stdTag">standard settings</span>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><b id="hsBest">–</b><span>best</span></div>
+        <div class="stat"><b id="hsAvg">–</b><span>last 7 avg</span></div>
+        <div class="stat"><b id="hsWeek">0</b><span>runs this week</span></div>
+      </div>
+      <button class="primary start-btn" id="startBtn">Start <span class="mono" id="startDur">120 s</span></button>
+      <p class="note">Type the answer; it moves on by itself when correct. The standard settings use the same ranges as Zetamac's defaults, so scores compare directly. Target: 3 runs a day, 5 days a week.</p>
+      <details class="settings" id="settingsBox">
+        <summary>Settings</summary>
+        <div class="settings-grid">
+          <div class="op-line"><label><input type="checkbox" id="c-add"> Addition</label>
+            <div class="range">( <input type="number" id="c-a1"> to <input type="number" id="c-a2"> ) + ( <input type="number" id="c-b1"> to <input type="number" id="c-b2"> )</div></div>
+          <div class="op-line"><label><input type="checkbox" id="c-sub"> Subtraction</label><div class="range">Addition problems in reverse</div></div>
+          <div class="op-line"><label><input type="checkbox" id="c-mul"> Multiplication</label>
+            <div class="range">( <input type="number" id="c-m1"> to <input type="number" id="c-m2"> ) × ( <input type="number" id="c-n1"> to <input type="number" id="c-n2"> )</div></div>
+          <div class="op-line"><label><input type="checkbox" id="c-div"> Division</label><div class="range">Multiplication problems in reverse</div></div>
+          <div class="op-line"><label for="c-dur">Duration</label>
+            <select id="c-dur"><option value="30">30 s</option><option value="60">60 s</option><option value="120">120 s</option><option value="180">180 s</option><option value="300">300 s</option></select></div>
+          <div class="row"><button class="ghost" id="resetCfg">Reset to standard</button></div>
+          <p class="note">Only runs on standard settings count toward your best score and the progress chart.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="panel run" id="sprintRun" hidden>
+      <div class="run-head"><span class="clock" id="clock">2:00</span><span class="score">score <b id="liveScore">0</b></span></div>
+      <div class="bar"><i id="timeBar"></i></div>
+      <div class="problem" id="problem" aria-live="polite">–</div>
+      <input id="ans" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-label="Answer">
+      <div class="row spread"><span class="note">Stop ends the run without saving.</span><button class="ghost" id="stopBtn">Stop</button></div>
+    </div>
+
+    <div class="panel" id="sprintDone" hidden>
+      <div class="row spread" style="align-items:flex-end">
+        <div><h3>Score</h3><div class="result-score" id="resScore">0</div></div>
+        <div style="text-align:right"><h3>vs last 7 avg</h3><div class="mono" id="resDelta" style="font-size:22px;font-weight:700">–</div></div>
+      </div>
+      <div><h3 style="margin-bottom:8px">Average seconds per answer</h3><div id="resOps" style="display:grid;gap:8px"></div></div>
+      <p id="resTip" style="font-size:14px"></p>
+      <p class="note" id="saveNote"></p>
+      <div class="row"><button class="primary" id="againBtn">Run again</button><button class="ghost" id="backBtn">Done</button></div>
+    </div>
+
+    <div class="panel" id="recentRunsPanel">
+      <h3>Recent runs</h3>
+      <table class="list" id="recentRuns"></table>
+    </div>
+  </section>
+
+  <!-- WEEK -->
+  <section class="view" id="view-week" hidden>
+    <div class="panel">
+      <div class="row spread">
+        <div class="week-head">
+          <h3 id="wkLabel">Week</h3>
+          <h2 id="wkTopic">–</h2>
+          <p class="muted mono" style="font-size:13px" id="wkDate"></p>
+        </div>
+        <div class="week-nav"><button id="wkPrev" aria-label="Previous week">←</button><button id="wkNow">This week</button><button id="wkNext" aria-label="Next week">→</button></div>
+      </div>
+      <div id="wkCallout"></div>
+      <div class="progress-line"><div class="bar"><i id="wkBar" style="width:0"></i></div><span id="wkCount">0 / 0</span></div>
+      <ul class="probs" id="wkList"></ul>
+      <p class="note">Problems you solve on LeetCode tick themselves at the next hourly sync. Tick by hand anything you solved earlier.</p>
+    </div>
+    <div class="panel">
+      <h3>Whole plan</h3>
+      <div class="progress-line"><div class="bar"><i id="planBar" style="width:0"></i></div><span id="planCount">0 / 0</span></div>
+    </div>
+  </section>
+
+  <!-- PROGRESS -->
+  <section class="view" id="view-progress" hidden>
+    <div class="tiles">
+      <div class="tile"><h3>Sprint best</h3><div class="big" id="tSprint">–</div><div class="sub" id="tSprintSub"></div></div>
+      <div class="tile"><h3>LeetCode solved</h3><div class="big" id="tLc">–</div><div class="emh" id="tLcEmh"></div><div class="sub" id="tLcSub"></div></div>
+      <div class="tile"><h3>Codeforces</h3><div class="big" id="tCf">–</div><div class="sub" id="tCfSub"></div></div>
+    </div>
+
+    <div class="panel">
+      <div class="row spread"><span class="sync-line" id="statsLine">stats not loaded yet</span><button class="ghost" id="syncNow">Sync now</button></div>
+      <p class="note" id="syncNote" hidden></p>
+    </div>
+
+    <div class="panel">
+      <div class="row spread"><h3>Sprint scores (standard runs)</h3><span class="sync-line" id="sprintCount"></span></div>
+      <div id="sprintChart"></div>
+      <div><h3 style="margin-bottom:8px">Seconds per answer, last 10 runs</h3><div id="opsAvg" style="display:grid;gap:8px"></div></div>
+    </div>
+
+    <div class="panel">
+      <h3>LeetCode total over time</h3>
+      <div id="lcChart"></div>
+      <h3>Recently solved</h3>
+      <table class="list" id="lcRecent"></table>
+    </div>
+
+    <div class="panel">
+      <h3>Codeforces contests</h3>
+      <table class="list" id="cfContests"></table>
+    </div>
+
+    <div class="panel">
+      <h3>Accounts to sync</h3>
+      <div class="form-grid">
+        <label for="pLc">LeetCode username<input type="text" id="pLc" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your-leetcode-id"></label>
+        <label for="pCf">Codeforces handle<input type="text" id="pCf" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your-handle"></label>
+      </div>
+      <div class="row"><button class="primary" id="saveProfile">Save</button><span class="note" id="profileNote"></span></div>
+    </div>
+
+    <div class="panel" id="devicePanel">
+      <h3>This device</h3>
+      <p id="deviceState" style="font-size:14px"></p>
+      <div id="connectBox" class="row" style="align-items:flex-end">
+        <label class="field" for="tokenIn" style="flex:1;min-width:220px">GitHub access token<input type="password" id="tokenIn" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+        <button class="primary" id="connectBtn">Connect</button>
+      </div>
+      <button class="ghost" id="disconnectBtn" hidden>Disconnect this device</button>
+      <p class="note" id="tokenNote"></p>
+      <details>
+        <summary class="note" style="cursor:pointer;font-weight:700">How to make the token (once, then paste it on each device)</summary>
+        <ol class="steps" style="margin-top:8px">
+          <li>On GitHub: Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token.</li>
+          <li>Expiration: up to 1 year. Repository access: <b>Only select repositories</b> → <code id="repoName"></code>.</li>
+          <li>Repository permissions: <b>Contents: Read and write</b> and <b>Actions: Read and write</b>.</li>
+          <li>Generate, copy, and paste it above. It stays in this browser only; it is never saved to the repo.</li>
+        </ol>
+      </details>
+    </div>
+  </section>
+</div>
+
+<script>
+const REPO = "HARLIEislegend/prep-log";
+const DATA_BRANCH = "data";
+const API = "https://api.github.com/repos/" + REPO;
+const WEEKS = [{"w":1,"date":"Nov 2","topic":"C++ for DSA + recursion basics","p":[{"id":1,"slug":"two-sum","title":"Two Sum","d":1,"redo":true},{"id":217,"slug":"contains-duplicate","title":"Contains Duplicate","d":1,"redo":true},{"id":242,"slug":"valid-anagram","title":"Valid Anagram","d":1,"redo":true},{"id":125,"slug":"valid-palindrome","title":"Valid Palindrome","d":1,"redo":true},{"id":121,"slug":"best-time-to-buy-and-sell-stock","title":"Best Time to Buy and Sell Stock","d":1,"redo":true},{"id":509,"slug":"fibonacci-number","title":"Fibonacci Number","d":1,"redo":false},{"id":344,"slug":"reverse-string","title":"Reverse String","d":1,"redo":false},{"id":50,"slug":"powx-n","title":"Pow(x, n)","d":2,"redo":false},{"id":206,"slug":"reverse-linked-list","title":"Reverse Linked List","d":1,"redo":false},{"id":21,"slug":"merge-two-sorted-lists","title":"Merge Two Sorted Lists","d":1,"redo":false}]},{"w":2,"date":"Nov 9","topic":"Subsequences","p":[{"id":78,"slug":"subsets","title":"Subsets","d":2,"redo":false},{"id":90,"slug":"subsets-ii","title":"Subsets II","d":2,"redo":false},{"id":17,"slug":"letter-combinations-of-a-phone-number","title":"Letter Combinations of a Phone Number","d":2,"redo":false},{"id":22,"slug":"generate-parentheses","title":"Generate Parentheses","d":2,"redo":false},{"id":1863,"slug":"sum-of-all-subset-xor-totals","title":"Sum of All Subset XOR Totals","d":1,"redo":false}]},{"w":3,"date":"Nov 16","topic":"Backtracking 1","p":[{"id":39,"slug":"combination-sum","title":"Combination Sum","d":2,"redo":false},{"id":40,"slug":"combination-sum-ii","title":"Combination Sum II","d":2,"redo":false},{"id":216,"slug":"combination-sum-iii","title":"Combination Sum III","d":2,"redo":false},{"id":46,"slug":"permutations","title":"Permutations","d":2,"redo":false},{"id":47,"slug":"permutations-ii","title":"Permutations II","d":2,"redo":false},{"id":77,"slug":"combinations","title":"Combinations","d":2,"redo":false}]},{"w":4,"date":"Nov 23","topic":"Backtracking 2","p":[{"id":51,"slug":"n-queens","title":"N-Queens","d":3,"redo":false},{"id":52,"slug":"n-queens-ii","title":"N-Queens II","d":3,"redo":false},{"id":79,"slug":"word-search","title":"Word Search","d":2,"redo":false},{"id":131,"slug":"palindrome-partitioning","title":"Palindrome Partitioning","d":2,"redo":false},{"id":37,"slug":"sudoku-solver","title":"Sudoku Solver","d":3,"redo":false}]},{"w":5,"date":"Nov 30","topic":"Binary search","p":[{"id":704,"slug":"binary-search","title":"Binary Search","d":1,"redo":false},{"id":34,"slug":"find-first-and-last-position-of-element-in-sorted-array","title":"Find First and Last Position of Element in Sorted Array","d":2,"redo":false},{"id":33,"slug":"search-in-rotated-sorted-array","title":"Search in Rotated Sorted Array","d":2,"redo":false},{"id":153,"slug":"find-minimum-in-rotated-sorted-array","title":"Find Minimum in Rotated Sorted Array","d":2,"redo":false},{"id":875,"slug":"koko-eating-bananas","title":"Koko Eating Bananas","d":2,"redo":false},{"id":1011,"slug":"capacity-to-ship-packages-within-d-days","title":"Capacity To Ship Packages Within D Days","d":2,"redo":false}]},{"w":6,"date":"Dec 7","topic":"Two pointers / sliding window","p":[{"id":3,"slug":"longest-substring-without-repeating-characters","title":"Longest Substring Without Repeating Characters","d":2,"redo":false},{"id":11,"slug":"container-with-most-water","title":"Container With Most Water","d":2,"redo":false},{"id":15,"slug":"3sum","title":"3Sum","d":2,"redo":false},{"id":424,"slug":"longest-repeating-character-replacement","title":"Longest Repeating Character Replacement","d":2,"redo":false},{"id":1004,"slug":"max-consecutive-ones-iii","title":"Max Consecutive Ones III","d":2,"redo":false},{"id":76,"slug":"minimum-window-substring","title":"Minimum Window Substring","d":3,"redo":false}]},{"w":7,"date":"Dec 14","topic":"Stack / monotonic stack","p":[{"id":20,"slug":"valid-parentheses","title":"Valid Parentheses","d":1,"redo":false},{"id":155,"slug":"min-stack","title":"Min Stack","d":2,"redo":false},{"id":496,"slug":"next-greater-element-i","title":"Next Greater Element I","d":1,"redo":false},{"id":739,"slug":"daily-temperatures","title":"Daily Temperatures","d":2,"redo":false},{"id":84,"slug":"largest-rectangle-in-histogram","title":"Largest Rectangle in Histogram","d":3,"redo":false},{"id":42,"slug":"trapping-rain-water","title":"Trapping Rain Water","d":3,"redo":false}]},{"w":8,"date":"Dec 21","topic":"Trees 1","p":[{"id":94,"slug":"binary-tree-inorder-traversal","title":"Binary Tree Inorder Traversal","d":1,"redo":false},{"id":104,"slug":"maximum-depth-of-binary-tree","title":"Maximum Depth of Binary Tree","d":1,"redo":false},{"id":226,"slug":"invert-binary-tree","title":"Invert Binary Tree","d":1,"redo":false},{"id":102,"slug":"binary-tree-level-order-traversal","title":"Binary Tree Level Order Traversal","d":2,"redo":false},{"id":543,"slug":"diameter-of-binary-tree","title":"Diameter of Binary Tree","d":1,"redo":false},{"id":110,"slug":"balanced-binary-tree","title":"Balanced Binary Tree","d":1,"redo":false}]},{"w":9,"date":"Dec 28","topic":"Trees 2 (light, holidays)","p":[{"id":199,"slug":"binary-tree-right-side-view","title":"Binary Tree Right Side View","d":2,"redo":false},{"id":236,"slug":"lowest-common-ancestor-of-a-binary-tree","title":"Lowest Common Ancestor of a Binary Tree","d":2,"redo":false},{"id":235,"slug":"lowest-common-ancestor-of-a-binary-search-tree","title":"Lowest Common Ancestor of a Binary Search Tree","d":2,"redo":false},{"id":98,"slug":"validate-binary-search-tree","title":"Validate Binary Search Tree","d":2,"redo":false},{"id":230,"slug":"kth-smallest-element-in-a-bst","title":"Kth Smallest Element in a BST","d":2,"redo":false},{"id":124,"slug":"binary-tree-maximum-path-sum","title":"Binary Tree Maximum Path Sum","d":3,"redo":false}]},{"w":10,"date":"Jan 4","topic":"Graphs 1","p":[{"id":200,"slug":"number-of-islands","title":"Number of Islands","d":2,"redo":false},{"id":733,"slug":"flood-fill","title":"Flood Fill","d":1,"redo":false},{"id":994,"slug":"rotting-oranges","title":"Rotting Oranges","d":2,"redo":false},{"id":130,"slug":"surrounded-regions","title":"Surrounded Regions","d":2,"redo":false},{"id":417,"slug":"pacific-atlantic-water-flow","title":"Pacific Atlantic Water Flow","d":2,"redo":false},{"id":133,"slug":"clone-graph","title":"Clone Graph","d":2,"redo":false}]},{"w":11,"date":"Jan 11","topic":"Graphs 2","p":[{"id":785,"slug":"is-graph-bipartite","title":"Is Graph Bipartite?","d":2,"redo":false},{"id":207,"slug":"course-schedule","title":"Course Schedule","d":2,"redo":false},{"id":210,"slug":"course-schedule-ii","title":"Course Schedule II","d":2,"redo":false},{"id":802,"slug":"find-eventual-safe-states","title":"Find Eventual Safe States","d":2,"redo":false}]},{"w":12,"date":"Jan 18","topic":"Heaps","p":[{"id":1046,"slug":"last-stone-weight","title":"Last Stone Weight","d":1,"redo":false},{"id":215,"slug":"kth-largest-element-in-an-array","title":"Kth Largest Element in an Array","d":2,"redo":false},{"id":347,"slug":"top-k-frequent-elements","title":"Top K Frequent Elements","d":2,"redo":false},{"id":973,"slug":"k-closest-points-to-origin","title":"K Closest Points to Origin","d":2,"redo":false},{"id":23,"slug":"merge-k-sorted-lists","title":"Merge k Sorted Lists","d":3,"redo":false},{"id":295,"slug":"find-median-from-data-stream","title":"Find Median from Data Stream","d":3,"redo":false}]},{"w":18,"date":"Mar 1","topic":"1-D DP","p":[{"id":70,"slug":"climbing-stairs","title":"Climbing Stairs","d":1,"redo":false},{"id":746,"slug":"min-cost-climbing-stairs","title":"Min Cost Climbing Stairs","d":1,"redo":false},{"id":198,"slug":"house-robber","title":"House Robber","d":2,"redo":false},{"id":213,"slug":"house-robber-ii","title":"House Robber II","d":2,"redo":false},{"id":740,"slug":"delete-and-earn","title":"Delete and Earn","d":2,"redo":false},{"id":91,"slug":"decode-ways","title":"Decode Ways","d":2,"redo":false}]},{"w":19,"date":"Mar 8","topic":"2-D / grid DP","p":[{"id":62,"slug":"unique-paths","title":"Unique Paths","d":2,"redo":false},{"id":63,"slug":"unique-paths-ii","title":"Unique Paths II","d":2,"redo":false},{"id":64,"slug":"minimum-path-sum","title":"Minimum Path Sum","d":2,"redo":false},{"id":120,"slug":"triangle","title":"Triangle","d":2,"redo":false},{"id":931,"slug":"minimum-falling-path-sum","title":"Minimum Falling Path Sum","d":2,"redo":false},{"id":1463,"slug":"cherry-pickup-ii","title":"Cherry Pickup II","d":3,"redo":false}]},{"w":20,"date":"Mar 15","topic":"Subsets / knapsack","p":[{"id":416,"slug":"partition-equal-subset-sum","title":"Partition Equal Subset Sum","d":2,"redo":false},{"id":494,"slug":"target-sum","title":"Target Sum","d":2,"redo":false},{"id":322,"slug":"coin-change","title":"Coin Change","d":2,"redo":false},{"id":518,"slug":"coin-change-ii","title":"Coin Change II","d":2,"redo":false},{"id":1049,"slug":"last-stone-weight-ii","title":"Last Stone Weight II","d":2,"redo":false},{"id":474,"slug":"ones-and-zeroes","title":"Ones and Zeroes","d":2,"redo":false}]},{"w":21,"date":"Mar 22","topic":"DP on strings","p":[{"id":1143,"slug":"longest-common-subsequence","title":"Longest Common Subsequence","d":2,"redo":false},{"id":516,"slug":"longest-palindromic-subsequence","title":"Longest Palindromic Subsequence","d":2,"redo":false},{"id":1312,"slug":"minimum-insertion-steps-to-make-a-string-palindrome","title":"Minimum Insertion Steps to Make a String Palindrome","d":3,"redo":false},{"id":583,"slug":"delete-operation-for-two-strings","title":"Delete Operation for Two Strings","d":2,"redo":false},{"id":1092,"slug":"shortest-common-supersequence","title":"Shortest Common Supersequence ","d":3,"redo":false},{"id":115,"slug":"distinct-subsequences","title":"Distinct Subsequences","d":3,"redo":false},{"id":72,"slug":"edit-distance","title":"Edit Distance","d":2,"redo":false},{"id":44,"slug":"wildcard-matching","title":"Wildcard Matching","d":3,"redo":false}]},{"w":22,"date":"Mar 29","topic":"DP on stocks","p":[{"id":121,"slug":"best-time-to-buy-and-sell-stock","title":"Best Time to Buy and Sell Stock","d":1,"redo":false},{"id":122,"slug":"best-time-to-buy-and-sell-stock-ii","title":"Best Time to Buy and Sell Stock II","d":2,"redo":false},{"id":123,"slug":"best-time-to-buy-and-sell-stock-iii","title":"Best Time to Buy and Sell Stock III","d":3,"redo":false},{"id":188,"slug":"best-time-to-buy-and-sell-stock-iv","title":"Best Time to Buy and Sell Stock IV","d":3,"redo":false},{"id":309,"slug":"best-time-to-buy-and-sell-stock-with-cooldown","title":"Best Time to Buy and Sell Stock with Cooldown","d":2,"redo":false},{"id":714,"slug":"best-time-to-buy-and-sell-stock-with-transaction-fee","title":"Best Time to Buy and Sell Stock with Transaction Fee","d":2,"redo":false}]},{"w":23,"date":"Apr 5","topic":"Longest increasing subsequence","p":[{"id":300,"slug":"longest-increasing-subsequence","title":"Longest Increasing Subsequence","d":2,"redo":false},{"id":368,"slug":"largest-divisible-subset","title":"Largest Divisible Subset","d":2,"redo":false},{"id":1048,"slug":"longest-string-chain","title":"Longest String Chain","d":2,"redo":false},{"id":673,"slug":"number-of-longest-increasing-subsequence","title":"Number of Longest Increasing Subsequence","d":2,"redo":false},{"id":354,"slug":"russian-doll-envelopes","title":"Russian Doll Envelopes","d":3,"redo":false}]},{"w":24,"date":"Apr 12","topic":"Partition DP + DP on squares","p":[{"id":1547,"slug":"minimum-cost-to-cut-a-stick","title":"Minimum Cost to Cut a Stick","d":3,"redo":false},{"id":312,"slug":"burst-balloons","title":"Burst Balloons","d":3,"redo":false},{"id":132,"slug":"palindrome-partitioning-ii","title":"Palindrome Partitioning II","d":3,"redo":false},{"id":1043,"slug":"partition-array-for-maximum-sum","title":"Partition Array for Maximum Sum","d":2,"redo":false},{"id":1277,"slug":"count-square-submatrices-with-all-ones","title":"Count Square Submatrices with All Ones","d":2,"redo":false},{"id":85,"slug":"maximal-rectangle","title":"Maximal Rectangle","d":3,"redo":false}]},{"w":25,"date":"Apr 19","topic":"Greedy + intervals","p":[{"id":55,"slug":"jump-game","title":"Jump Game","d":2,"redo":false},{"id":45,"slug":"jump-game-ii","title":"Jump Game II","d":2,"redo":false},{"id":56,"slug":"merge-intervals","title":"Merge Intervals","d":2,"redo":false},{"id":57,"slug":"insert-interval","title":"Insert Interval","d":2,"redo":false},{"id":435,"slug":"non-overlapping-intervals","title":"Non-overlapping Intervals","d":2,"redo":false},{"id":452,"slug":"minimum-number-of-arrows-to-burst-balloons","title":"Minimum Number of Arrows to Burst Balloons","d":2,"redo":false},{"id":621,"slug":"task-scheduler","title":"Task Scheduler","d":2,"redo":false}]},{"w":26,"date":"Apr 26","topic":"Graphs 3","p":[{"id":547,"slug":"number-of-provinces","title":"Number of Provinces","d":2,"redo":false},{"id":684,"slug":"redundant-connection","title":"Redundant Connection","d":2,"redo":false},{"id":1584,"slug":"min-cost-to-connect-all-points","title":"Min Cost to Connect All Points","d":2,"redo":false},{"id":743,"slug":"network-delay-time","title":"Network Delay Time","d":2,"redo":false},{"id":1631,"slug":"path-with-minimum-effort","title":"Path With Minimum Effort","d":2,"redo":false},{"id":787,"slug":"cheapest-flights-within-k-stops","title":"Cheapest Flights Within K Stops","d":2,"redo":false}]},{"w":27,"date":"May 17","topic":"Tries + bit manipulation","p":[{"id":208,"slug":"implement-trie-prefix-tree","title":"Implement Trie (Prefix Tree)","d":2,"redo":false},{"id":211,"slug":"design-add-and-search-words-data-structure","title":"Design Add and Search Words Data Structure","d":2,"redo":false},{"id":421,"slug":"maximum-xor-of-two-numbers-in-an-array","title":"Maximum XOR of Two Numbers in an Array","d":2,"redo":false},{"id":136,"slug":"single-number","title":"Single Number","d":1,"redo":false},{"id":191,"slug":"number-of-1-bits","title":"Number of 1 Bits","d":1,"redo":false},{"id":338,"slug":"counting-bits","title":"Counting Bits","d":1,"redo":false},{"id":268,"slug":"missing-number","title":"Missing Number","d":1,"redo":false}]}];
+const DEFAULTS = { dur: 120, add: true, sub: true, mul: true, div: true, a1: 2, a2: 100, b1: 2, b2: 100, m1: 2, m2: 12, n1: 2, n2: 100 };
+const OPS = { add: "+", sub: "−", mul: "×", div: "÷" };
+const MON = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+// ---------- state ----------
+// LOG is the data-branch log.json (runs, ticks, profile). Changes made here go into `pending`
+// first and are applied on top of LOG for display until they are committed to GitHub.
+let LOG = store.get("prep.log", { runs: [], ticks: {}, profile: {} });
+let STATS = store.get("prep.stats", null);
+let pending = store.get("prep.pending", []);
+let token = store.get("prep.token", "");
+let cfg = { ...DEFAULTS, ...store.get("prep.cfg", {}) };
+let net = { loaded: false, error: null, saving: false, tokenBad: false };
+
+WEEKS.forEach((w) => {
+  const [m, d] = w.date.split(" ");
+  const mi = MON[m];
+  w.start = new Date(mi >= 10 ? 2026 : 2027, mi, +d);
+});
+
+// ---------- helpers ----------
+const isStandard = (c) => Object.keys(DEFAULTS).every((k) => c[k] === DEFAULTS[k]);
+const rand = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+function ago(ms) {
+  if (!ms) return "never";
+  const s = (Date.now() - ms) / 1000;
+  if (s < 90) return "just now";
+  if (s < 3600) return Math.round(s / 60) + " min ago";
+  if (s < 86400 * 1.5) return Math.round(s / 3600) + " h ago";
+  return Math.round(s / 86400) + " days ago";
+}
+const fmtDate = (ms) => new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+function startOfWeek(d = new Date()) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+function applyOps(log, ops) {
+  const out = { runs: [...(log.runs || [])], ticks: { ...(log.ticks || {}) }, profile: { ...(log.profile || {}) } };
+  for (const op of ops) {
+    if (op.type === "run" && !out.runs.some((r) => r.id === op.run.id)) out.runs.push(op.run);
+    if (op.type === "tick") { if (op.on) out.ticks[op.slug] = op.at; else delete out.ticks[op.slug]; }
+    if (op.type === "profile") out.profile = { leetcode: op.leetcode, codeforces: op.codeforces };
+  }
+  return out;
+}
+const view = () => applyOps(LOG, pending);
+const allRuns = () => view().runs.slice().sort((a, b) => b.at - a.at);
+const stdRuns = () => allRuns().filter((r) => r.std);
+const unsavedIds = () => new Set(pending.filter((p) => p.type === "run").map((p) => p.run.id));
+const isDone = (slug) => !!(STATS?.solved?.[slug] || view().ticks[slug]);
+
+// ---------- GitHub storage ----------
+const b64d = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), (c) => c.charCodeAt(0)));
+function b64e(str) { const bytes = new TextEncoder().encode(str); let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(bin); }
+async function gh(path, opts = {}) {
+  const r = await fetch(API + path, {
+    ...opts, cache: "no-store",
+    headers: { Accept: "application/vnd.github+json", ...(token ? { Authorization: "Bearer " + token } : {}), ...(opts.body ? { "Content-Type": "application/json" } : {}) },
+  });
+  if (r.status === 401) { net.tokenBad = true; renderDevice(); }
+  if (!r.ok) { const e = new Error("GitHub " + r.status); e.status = r.status; throw e; }
+  return r.status === 204 ? null : r.json();
+}
+async function readFile(name) {
+  if (token && !net.tokenBad) {
+    const j = await gh(`/contents/${name}?ref=${DATA_BRANCH}`);
+    return { sha: j.sha, data: JSON.parse(b64d(j.content)) };
+  }
+  const r = await fetch(`https://raw.githubusercontent.com/${REPO}/${DATA_BRANCH}/${name}?t=${Date.now()}`, { cache: "no-store" });
+  if (!r.ok) throw new Error("GitHub " + r.status);
+  return { sha: null, data: await r.json() };
+}
+async function refresh() {
+  try {
+    const [l, s] = await Promise.all([readFile("log.json"), readFile("stats.json").catch(() => ({ data: null }))]);
+    LOG = l.data; store.set("prep.log", LOG);
+    if (s.data) { STATS = s.data; store.set("prep.stats", STATS); }
+    net.loaded = true; net.error = null;
+  } catch (e) { net.error = e; }
+  renderAll();
+  flush();
+}
+function queueOp(op) { pending.push(op); store.set("prep.pending", pending); renderAll(); flush(); }
+async function flush() {
+  if (!token || net.tokenBad || net.saving || !pending.length) return;
+  net.saving = true; setBadge();
+  let ok = false;
+  for (let attempt = 0; attempt < 4 && !ok; attempt++) {
+    try {
+      const { sha, data } = await readFile("log.json");
+      const ops = pending.slice();
+      const next = { ...applyOps(data, ops), updatedAt: Date.now() };
+      const runs = ops.filter((o) => o.type === "run").length;
+      const message = runs ? `Sprint run${runs > 1 ? "s" : ""} (${ops.filter((o) => o.type === "run").map((o) => o.run.score).join(", ")})` : ops[0].type === "tick" ? "Update ticks" : "Update profile";
+      await gh("/contents/log.json", { method: "PUT", body: JSON.stringify({ message, content: b64e(JSON.stringify(next)), sha, branch: DATA_BRANCH }) });
+      LOG = next; store.set("prep.log", LOG);
+      pending = pending.filter((p) => !ops.includes(p)); store.set("prep.pending", pending);
+      ok = true; net.error = null;
+    } catch (e) {
+      net.error = e;
+      if (e.status !== 409 && e.status !== 422) break; // someone else wrote first: re-read and retry
+      await new Promise((r) => setTimeout(r, 400 + Math.random() * 600));
+    }
+  }
+  net.saving = false;
+  renderAll();
+  if (ok && pending.length) flush();
+}
+
+// ---------- routing ----------
+const VIEWS = ["sprint", "week", "progress"];
+function route() {
+  const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "sprint";
+  VIEWS.forEach((x) => { $("view-" + x).hidden = x !== v; });
+  document.querySelectorAll("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.dataset.view === v ? "page" : "false"));
+}
+addEventListener("hashchange", route);
+
+// ---------- sprint: settings ----------
+const CFG_FIELDS = ["a1", "a2", "b1", "b2", "m1", "m2", "n1", "n2"];
+function paintCfg() {
+  ["add", "sub", "mul", "div"].forEach((o) => { $("c-" + o).checked = cfg[o]; });
+  CFG_FIELDS.forEach((f) => { $("c-" + f).value = cfg[f]; });
+  $("c-dur").value = String(cfg.dur);
+  $("startDur").textContent = cfg.dur + " s";
+  const std = isStandard(cfg);
+  $("stdTag").textContent = std ? "standard settings" : "custom settings";
+  $("stdTag").classList.toggle("off", !std);
+}
+function readCfg() {
+  const c = { ...cfg };
+  ["add", "sub", "mul", "div"].forEach((o) => { c[o] = $("c-" + o).checked; });
+  CFG_FIELDS.forEach((f) => { const v = parseInt($("c-" + f).value, 10); if (Number.isFinite(v) && v >= 0) c[f] = v; });
+  if (c.a1 > c.a2) [c.a1, c.a2] = [c.a2, c.a1];
+  if (c.b1 > c.b2) [c.b1, c.b2] = [c.b2, c.b1];
+  if (c.m1 > c.m2) [c.m1, c.m2] = [c.m2, c.m1];
+  if (c.n1 > c.n2) [c.n1, c.n2] = [c.n2, c.n1];
+  c.m1 = Math.max(1, c.m1);
+  c.dur = parseInt($("c-dur").value, 10) || 120;
+  if (!c.add && !c.sub && !c.mul && !c.div) c.add = true;
+  cfg = c; store.set("prep.cfg", cfg); paintCfg();
+}
+$("settingsBox").addEventListener("change", readCfg);
+$("resetCfg").addEventListener("click", () => { cfg = { ...DEFAULTS }; store.set("prep.cfg", cfg); paintCfg(); });
+
+// ---------- sprint: run ----------
+let run = null, tick = null, wake = null;
+function genProblem(prev) {
+  const ops = ["add", "sub", "mul", "div"].filter((o) => cfg[o]);
+  for (let i = 0; i < 10; i++) {
+    const op = ops[rand(0, ops.length - 1)];
+    let p;
+    if (op === "add" || op === "sub") {
+      const a = rand(cfg.a1, cfg.a2), b = rand(cfg.b1, cfg.b2);
+      p = op === "add" ? { op, text: `${a} + ${b}`, ans: a + b } : { op, text: `${a + b} − ${a}`, ans: b };
+    } else {
+      const a = rand(cfg.m1, cfg.m2), b = rand(cfg.n1, cfg.n2);
+      p = op === "mul" ? { op, text: `${a} × ${b}`, ans: a * b } : { op, text: `${a * b} ÷ ${a}`, ans: b };
+    }
+    if (!prev || p.text !== prev.text) return p;
+  }
+}
+function nextProblem() {
+  run.p = genProblem(run.p);
+  run.pAt = performance.now();
+  $("problem").textContent = run.p.text;
+  $("ans").value = "";
+}
+function startRun() {
+  readCfg();
+  run = { score: 0, started: performance.now(), dur: cfg.dur * 1000, ops: { add: { n: 0, ms: 0 }, sub: { n: 0, ms: 0 }, mul: { n: 0, ms: 0 }, div: { n: 0, ms: 0 } }, p: null, cfg: { ...cfg } };
+  $("sprintIdle").hidden = true; $("sprintDone").hidden = true; $("recentRunsPanel").hidden = true; $("sprintRun").hidden = false;
+  $("liveScore").textContent = "0";
+  nextProblem();
+  $("ans").focus();
+  try { navigator.wakeLock?.request("screen").then((w) => { wake = w; }).catch(() => {}); } catch {}
+  tick = setInterval(paintClock, 100);
+  paintClock();
+}
+function paintClock() {
+  const left = Math.max(0, run.dur - (performance.now() - run.started));
+  const s = Math.ceil(left / 1000);
+  $("clock").textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  $("clock").classList.toggle("low", s <= 10);
+  $("timeBar").style.transform = `scaleX(${left / run.dur})`;
+  if (left <= 0) endRun(true);
+}
+$("ans").addEventListener("input", (e) => {
+  if (!run) return;
+  const v = e.target.value.replace(/[^0-9]/g, "");
+  if (v !== e.target.value) e.target.value = v;
+  if (v !== "" && parseInt(v, 10) === run.p.ans) {
+    const o = run.ops[run.p.op];
+    o.n += 1; o.ms += performance.now() - run.pAt;
+    run.score += 1;
+    $("liveScore").textContent = run.score;
+    nextProblem();
+  }
+});
+$("ans").addEventListener("keydown", (e) => { if (e.key === "Escape") endRun(false); });
+function stopTimers() { clearInterval(tick); tick = null; try { wake?.release(); } catch {} wake = null; }
+function endRun(save) {
+  if (!run) return;
+  stopTimers();
+  const r = run; run = null;
+  $("sprintRun").hidden = true; $("recentRunsPanel").hidden = false;
+  if (!save) { $("sprintIdle").hidden = false; return; }
+  const doc = {
+    id: "r" + Date.now() + Math.random().toString(36).slice(2, 6),
+    at: Date.now(), score: r.score, dur: r.cfg.dur, std: isStandard(r.cfg),
+    ops: Object.fromEntries(Object.entries(r.ops).map(([k, v]) => [k, { n: v.n, ms: Math.round(v.ms) }])),
+  };
+  if (!doc.std) doc.cfg = r.cfg;
+  showResult(doc);
+  queueOp({ type: "run", run: doc });
+}
+function opRows(ops, el) {
+  const rows = Object.entries(OPS).map(([k, sym]) => {
+    const o = ops[k] || { n: 0, ms: 0 };
+    return { k, sym, n: o.n, sec: o.n ? o.ms / o.n / 1000 : null };
+  }).filter((r) => r.n > 0);
+  if (!rows.length) { el.innerHTML = '<p class="empty">No answers yet.</p>'; return null; }
+  const max = Math.max(...rows.map((r) => r.sec));
+  const slow = rows.reduce((a, b) => (b.sec > a.sec ? b : a));
+  el.innerHTML = rows.map((r) => `
+    <div class="oprow${rows.length > 1 && r === slow ? " slow" : ""}">
+      <span class="sym">${r.sym}</span>
+      <span class="track"><i style="width:${Math.max(4, (r.sec / max) * 100)}%"></i></span>
+      <span>${r.sec.toFixed(2)} s</span><span class="n">×${r.n}</span>
+    </div>`).join("");
+  return rows.length > 1 ? slow : null;
+}
+let lastResultId = null;
+function showResult(doc) {
+  lastResultId = doc.id;
+  $("sprintDone").hidden = false;
+  $("resScore").textContent = doc.score;
+  const prev = stdRuns().slice(0, 7).map((r) => r.score);
+  const a = avg(prev);
+  if (doc.std && a !== null) {
+    const d = doc.score - a;
+    $("resDelta").textContent = (d >= 0 ? "+" : "") + d.toFixed(1);
+    $("resDelta").className = "mono " + (d >= 0 ? "up" : "down");
+  } else {
+    $("resDelta").textContent = doc.std ? "first run" : "custom";
+    $("resDelta").className = "mono muted";
+  }
+  const slow = opRows(doc.ops, $("resOps"));
+  const tips = {
+    add: "Addition is your slowest. Add the tens first, then the units (47 + 38 = 77 + 8).",
+    sub: "Subtraction is your slowest. Count up from the smaller number instead of borrowing (93 − 47: 47 → 50 → 93 is 3 + 43).",
+    mul: "Multiplication is your slowest. Split the big number (7 × 68 = 7 × 60 + 7 × 8 = 420 + 56).",
+    div: "Division is your slowest. Ask which times-table fact gives the dividend (432 ÷ 9: 9 × 48 = 432).",
+  };
+  $("resTip").textContent = slow ? tips[slow.k] : "";
+}
+function paintSaveNote() {
+  if (!lastResultId || $("sprintDone").hidden) return;
+  const el = $("saveNote");
+  if (!unsavedIds().has(lastResultId)) { el.textContent = "Saved. It shows on all your devices."; el.className = "note ok"; }
+  else if (!token || net.tokenBad) { el.textContent = "Saved on this device. Connect this device (Progress tab) to upload it."; el.className = "note bad"; }
+  else if (net.saving) { el.textContent = "Saving…"; el.className = "note"; }
+  else { el.textContent = "Saved on this device. Upload failed; it retries when you're back online."; el.className = "note bad"; }
+}
+$("startBtn").addEventListener("click", startRun);
+$("againBtn").addEventListener("click", startRun);
+$("backBtn").addEventListener("click", () => { $("sprintDone").hidden = true; $("sprintIdle").hidden = false; });
+$("stopBtn").addEventListener("click", () => endRun(false));
+
+function renderRuns() {
+  const std = stdRuns();
+  $("hsBest").textContent = std.length ? Math.max(...std.map((r) => r.score)) : "–";
+  const a = avg(std.slice(0, 7).map((r) => r.score));
+  $("hsAvg").textContent = a === null ? "–" : a.toFixed(1);
+  const wk = startOfWeek().getTime();
+  $("hsWeek").textContent = allRuns().filter((r) => r.at >= wk).length;
+  const uns = unsavedIds();
+  const recent = allRuns().slice(0, 8);
+  $("recentRuns").innerHTML = recent.length
+    ? recent.map((r) => `<tr><td>${fmtDate(r.at)} <span class="muted">${new Date(r.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>${r.std ? "" : ' <span class="std-tag off">custom</span>'}${uns.has(r.id) ? ' <span class="std-tag off">not uploaded</span>' : ""}</td><td class="r"><b>${r.score}</b></td></tr>`).join("")
+    : '<tr><td class="empty">No runs yet. Your first score is your baseline; most people start between 15 and 30.</td></tr>';
+  paintSaveNote();
+}
+
+// ---------- week ----------
+function currentWeekIdx() { const now = new Date(); let idx = 0; WEEKS.forEach((w, i) => { if (w.start <= now) idx = i; }); return idx; }
+let wkIdx = currentWeekIdx();
+const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+function renderWeek() {
+  const w = WEEKS[wkIdx];
+  if (!w) return;
+  $("wkLabel").textContent = "Week " + w.w;
+  $("wkTopic").textContent = w.topic;
+  const end = new Date(w.start); end.setDate(end.getDate() + 6);
+  $("wkDate").textContent = fmtDate(w.start) + " – " + fmtDate(end) + " " + end.getFullYear();
+  const now = new Date();
+  const sauvc = now >= new Date(2027, 0, 25) && now < new Date(2027, 2, 1);
+  $("wkCallout").innerHTML = wkIdx === currentWeekIdx() && sauvc
+    ? '<div class="callout">SAUVC crunch (Jan 25 – Feb 28): re-solve 3 problems a week from your redo list and keep the sprint going. The DP block starts Mar 1.</div>'
+    : (now < WEEKS[0].start && wkIdx === 0 ? `<div class="callout">The plan starts Monday ${fmtDate(WEEKS[0].start)}. You can start early.</div>` : "");
+  const ticks = view().ticks, solved = STATS?.solved || {};
+  const done = w.p.filter((p) => isDone(p.slug)).length;
+  $("wkCount").textContent = `${done} / ${w.p.length}`;
+  $("wkBar").style.width = (w.p.length ? (done / w.p.length) * 100 : 0) + "%";
+  $("wkList").innerHTML = w.p.map((p) => {
+    const synced = !!solved[p.slug], manual = !!ticks[p.slug];
+    const cls = synced ? "tick synced" : manual ? "tick on" : "tick";
+    const lab = synced ? "Solved on LeetCode (synced)" : manual ? "Ticked by hand. Click to untick" : "Mark as done";
+    const diff = ["", "Easy", "Medium", "Hard"][p.d];
+    const meta = [`#${p.id}`, p.redo ? "re-do in C++" : "", synced ? "synced " + fmtDate(solved[p.slug].at) : manual ? "ticked by hand" : ""].filter(Boolean).join(" · ");
+    return `<li class="${synced || manual ? "done" : ""}">
+      <button class="${cls}" data-slug="${esc(p.slug)}" aria-pressed="${synced || manual}" aria-label="${esc(lab)}: ${esc(p.title)}" title="${esc(lab)}" ${synced ? "disabled" : ""}>${synced || manual ? CHECK : ""}</button>
+      <div class="ptitle"><a href="https://leetcode.com/problems/${esc(p.slug)}/" target="_blank" rel="noopener">${esc(p.title)}</a><span class="meta">${esc(meta)}</span></div>
+      <span class="chip d${p.d}">${diff}</span></li>`;
+  }).join("");
+  $("wkPrev").disabled = wkIdx === 0; $("wkNext").disabled = wkIdx === WEEKS.length - 1;
+  const uniq = [...new Set(WEEKS.flatMap((x) => x.p.map((p) => p.slug)))];
+  const d = uniq.filter(isDone).length;
+  $("planCount").textContent = `${d} / ${uniq.length}`;
+  $("planBar").style.width = (d / uniq.length) * 100 + "%";
+}
+$("wkList").addEventListener("click", (e) => {
+  const b = e.target.closest("button.tick");
+  if (!b || b.disabled) return;
+  const slug = b.dataset.slug;
+  queueOp({ type: "tick", slug, on: !view().ticks[slug], at: Date.now() });
+});
+$("wkPrev").addEventListener("click", () => { wkIdx = Math.max(0, wkIdx - 1); renderWeek(); });
+$("wkNext").addEventListener("click", () => { wkIdx = Math.min(WEEKS.length - 1, wkIdx + 1); renderWeek(); });
+$("wkNow").addEventListener("click", () => { wkIdx = currentWeekIdx(); renderWeek(); });
+
+// ---------- progress ----------
+function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw || 1))); const n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+function lineChart(pts, { targets = [], xLabel = () => "" } = {}) {
+  if (pts.length < 2) return null;
+  const W = 640, H = 210, L = 40, R = 14, T = 12, B = 26;
+  const ys = pts.map((p) => p.y).concat(targets);
+  let lo = Math.min(...ys), hi = Math.max(...ys);
+  const pad = Math.max(2, (hi - lo) * 0.12); lo = Math.max(0, Math.floor(lo - pad)); hi = Math.ceil(hi + pad);
+  const x = (i) => L + (i / (pts.length - 1)) * (W - L - R);
+  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const step = niceStep((hi - lo) / 4);
+  let grid = "";
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) grid += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  const tg = targets.map((t) => `<line class="target" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/><text x="${W - R}" y="${y(t) - 5}" text-anchor="end">target ${t}</text>`).join("");
+  const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.y).toFixed(1)}`).join("");
+  const area = `${d}L${x(pts.length - 1)},${H - B}L${L},${H - B}Z`;
+  const dots = pts.length <= 40 ? pts.slice(0, -1).map((p, i) => `<circle class="dot" cx="${x(i)}" cy="${y(p.y)}" r="2.5"/>`).join("") : "";
+  const last = pts[pts.length - 1];
+  const xl = `<text x="${L}" y="${H - 6}">${xLabel(pts[0])}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${xLabel(last)}</text>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart, latest value ${last.y}">${grid}${tg}<path class="area" d="${area}" opacity="0.6"/><path class="line" d="${d}"/>${dots}<circle class="last" cx="${x(pts.length - 1)}" cy="${y(last.y)}" r="5"/>${xl}</svg>`;
+}
+function renderProgress() {
+  const std = stdRuns();
+  $("tSprint").textContent = std.length ? Math.max(...std.map((r) => r.score)) : "–";
+  const a7 = avg(std.slice(0, 7).map((r) => r.score));
+  $("tSprintSub").textContent = (a7 === null ? "no runs yet" : `last 7 avg ${a7.toFixed(1)}`) + " · target 50+ by Aug 2027";
+  $("sprintCount").textContent = std.length + " runs";
+  $("sprintChart").innerHTML = lineChart(std.slice(0, 120).reverse().map((r) => ({ y: r.score, at: r.at })), { targets: [40, 50], xLabel: (p) => fmtDate(p.at) }) || '<p class="empty">The chart appears after your second standard run.</p>';
+  const agg = { add: { n: 0, ms: 0 }, sub: { n: 0, ms: 0 }, mul: { n: 0, ms: 0 }, div: { n: 0, ms: 0 } };
+  std.slice(0, 10).forEach((r) => Object.keys(agg).forEach((k) => { agg[k].n += r.ops?.[k]?.n || 0; agg[k].ms += r.ops?.[k]?.ms || 0; }));
+  opRows(agg, $("opsAvg"));
+
+  const profile = view().profile || {};
+  const lc = STATS?.lc;
+  if (lc) {
+    $("tLc").textContent = lc.total;
+    $("tLcEmh").innerHTML = `<span class="d1">E ${lc.easy}</span><span class="d2">M ${lc.medium}</span><span class="d3">H ${lc.hard}</span>`;
+    $("tLcSub").textContent = "plan: ~135 by Jan · ~300 by Aug";
+  } else {
+    $("tLc").textContent = "–"; $("tLcEmh").innerHTML = "";
+    $("tLcSub").textContent = profile.leetcode ? "waiting for the next sync" : "add your username below";
+  }
+  const hist = Object.entries(STATS?.lcHistory || {}).sort(([a], [b]) => (a < b ? -1 : 1)).map(([date, total]) => ({ y: total, date }));
+  $("lcChart").innerHTML = lineChart(hist, { xLabel: (p) => fmtDate(new Date(p.date + "T00:00:00").getTime()) }) || '<p class="empty">The chart fills in day by day as the sync records your total.</p>';
+  const solved = Object.entries(STATS?.solved || {}).sort((a, b) => b[1].at - a[1].at).slice(0, 10);
+  $("lcRecent").innerHTML = solved.length
+    ? solved.map(([slug, v]) => `<tr><td><a href="https://leetcode.com/problems/${esc(slug)}/" target="_blank" rel="noopener" style="color:var(--ink)">${esc(v.title || slug)}</a></td><td class="r muted">${fmtDate(v.at)}</td></tr>`).join("")
+    : '<tr><td class="empty">Solved problems appear here after a sync.</td></tr>';
+
+  const cf = STATS?.cf;
+  if (cf) {
+    $("tCf").textContent = cf.rating;
+    $("tCfSub").textContent = `${cf.rank || "unrated"} · max ${cf.maxRating} · ${cf.contests?.length || 0} rated contests`;
+  } else {
+    $("tCf").textContent = "–";
+    $("tCfSub").textContent = profile.codeforces ? "waiting for the next sync" : "add your handle below";
+  }
+  const cs = (cf?.contests || []).slice().reverse();
+  $("cfContests").innerHTML = cs.length
+    ? cs.map((c) => { const d = c.newRating - c.oldRating; return `<tr><td>${esc(c.name)}<div class="sync-line">${fmtDate(c.at)} · rank ${c.rank}</div></td><td class="r"><b>${c.newRating}</b> <span class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : ""}${d}</span></td></tr>`; }).join("")
+    : '<tr><td class="empty">Rated contests appear here after a sync.</td></tr>';
+
+  const errs = STATS?.errors?.length ? " · problem: " + STATS.errors.join("; ") : "";
+  $("statsLine").textContent = STATS?.checkedAt ? `stats checked ${ago(STATS.checkedAt)}, syncs hourly${errs}` : "stats not synced yet";
+  const focused = document.activeElement;
+  if (focused !== $("pLc") && focused !== $("pCf")) { $("pLc").value = profile.leetcode || ""; $("pCf").value = profile.codeforces || ""; }
+}
+$("saveProfile").addEventListener("click", () => {
+  queueOp({ type: "profile", leetcode: $("pLc").value.trim(), codeforces: $("pCf").value.trim() });
+  $("profileNote").textContent = token ? "Saved. Press Sync now to pull the new stats." : "Saved on this device. Connect this device to upload it.";
+});
+$("syncNow").addEventListener("click", async () => {
+  const note = $("syncNote"); note.hidden = false;
+  if (!token || net.tokenBad) { note.textContent = "Connect this device first (bottom of this tab)."; note.className = "note bad"; return; }
+  $("syncNow").disabled = true;
+  try {
+    await gh("/actions/workflows/sync.yml/dispatches", { method: "POST", body: JSON.stringify({ ref: "main" }) });
+    note.textContent = "Sync started. New stats appear in about a minute."; note.className = "note ok";
+    setTimeout(refresh, 60000); setTimeout(refresh, 120000);
+  } catch (e) {
+    note.textContent = e.status === 403 ? "The token can't start syncs. Give it Actions: Read and write." : "Couldn't start the sync (" + e.message + ").";
+    note.className = "note bad";
+  }
+  setTimeout(() => { $("syncNow").disabled = false; }, 60000);
+});
+
+// ---------- device connection ----------
+function renderDevice() {
+  $("repoName").textContent = REPO;
+  const connected = token && !net.tokenBad;
+  $("deviceState").textContent = connected
+    ? "Connected. Runs and ticks from this device are saved to your log."
+    : net.tokenBad ? "The saved token stopped working (expired or revoked). Paste a new one."
+    : "Not connected. You can read your log and practise, but new runs stay on this device until you connect.";
+  $("connectBox").hidden = !!connected;
+  $("disconnectBtn").hidden = !connected;
+}
+$("connectBtn").addEventListener("click", async () => {
+  const t = $("tokenIn").value.trim();
+  if (!t) return;
+  $("connectBtn").disabled = true; $("tokenNote").textContent = "Checking…"; $("tokenNote").className = "note";
+  try {
+    const r = await fetch(API, { headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + t }, cache: "no-store" });
+    const j = r.ok ? await r.json() : null;
+    if (!j) throw new Error(r.status === 401 ? "GitHub rejected this token." : `GitHub said ${r.status}. Check the token has access to ${REPO}.`);
+    if (!j.permissions?.push) throw new Error("This token can read but not write. Give it Contents: Read and write.");
+    token = t; store.set("prep.token", token); net.tokenBad = false; $("tokenIn").value = "";
+    $("tokenNote").textContent = "Connected."; $("tokenNote").className = "note ok";
+    renderDevice(); refresh();
+  } catch (e) { $("tokenNote").textContent = e.message; $("tokenNote").className = "note bad"; }
+  $("connectBtn").disabled = false;
+});
+$("disconnectBtn").addEventListener("click", () => { token = ""; store.set("prep.token", ""); renderDevice(); setBadge(); $("tokenNote").textContent = "Token removed from this device."; $("tokenNote").className = "note"; });
+
+// ---------- badge + boot ----------
+function setBadge() {
+  const b = $("badge");
+  let text = "", warn = false;
+  if (pending.length) { text = net.saving ? "saving…" : `${pending.length} unsaved`; warn = !net.saving; }
+  else if (!token || net.tokenBad) { text = "read-only device"; warn = true; }
+  else if (net.error && !net.loaded) { text = "offline"; warn = true; }
+  else text = STATS?.checkedAt ? "synced " + ago(STATS.checkedAt) : "connected";
+  b.textContent = text; b.classList.toggle("warn", warn);
+}
+function renderAll() { renderRuns(); renderWeek(); renderProgress(); renderDevice(); setBadge(); }
+
+paintCfg(); route(); renderAll(); refresh();
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !run) refresh(); });
+addEventListener("online", () => { if (!run) refresh(); });
+setInterval(() => { if (!run && !document.hidden) refresh(); }, 5 * 60 * 1000);
+</script>
+</body>
+</html>
