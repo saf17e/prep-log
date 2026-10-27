@@ -1,1 +1,1 @@
-{"runs":[],"ticks":{},"profile":{"leetcode":"Saf1re_hims3lf","codeforces":"Saf1re_himself"},"updatedAt":1793087400682}
+{"runs":[{"id":"r1793087609050mkxu","at":1793087609050,"score":21,"dur":120,"std":true,"ops":{"add":{"n":4,"ms":13121},"sub":{"n":9,"ms":46574},"mul":{"n":2,"ms":17775},"div":{"n":6,"ms":23066}}}],"ticks":{},"profile":{"leetcode":"Saf1re_hims3lf","codeforces":"Saf1re_himself"},"updatedAt":1793087609564}
