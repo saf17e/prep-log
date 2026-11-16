@@ -875,6 +875,7 @@ function setBadge() {
 }
 function renderAll() { renderRuns(); renderWeek(); renderProb(); renderProgress(); renderDevice(); setBadge(); }
 
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 paintCfg(); route(); renderAll(); refresh();
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !run) refresh(); });
 addEventListener("online", () => { if (!run) refresh(); });
