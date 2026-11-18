@@ -189,6 +189,18 @@ code { font-family: var(--f-mono); font-size: 0.92em; background: var(--grid); p
   nav.tabs a { padding: 6px 10px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.inv-group { display: grid; gap: 10px; }
+.inv-group > h2 { margin: 10px 0 0; font-size: 15px; font-family: var(--f-display); }
+.inv-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.inv-card summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.inv-card .nm { font-weight: 700; }
+.inv-card .meta { color: var(--muted); font-size: 13px; }
+.inv-card .tag { font-family: var(--f-mono); font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--accent-soft); }
+.inv-card .tag.rec { background: var(--good); color: var(--accent-ink); }
+.inv-tpl { display: grid; gap: 6px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.inv-tpl textarea { width: 100%; min-height: 96px; resize: vertical; font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.inv-tpl .lab { font-size: 12px; color: var(--muted); font-family: var(--f-mono); }
 </style>
 </head>
 <body>
@@ -200,6 +212,7 @@ code { font-family: var(--f-mono); font-size: 0.92em; background: var(--grid); p
       <a href="#week" data-view="week">Week</a>
       <a href="#prob" data-view="prob">Prob</a>
       <a href="#progress" data-view="progress">Progress</a>
+      <a href="#invites" data-view="invites">Invites</a>
     </nav>
   </header>
 
@@ -364,6 +377,12 @@ code { font-family: var(--f-mono); font-size: 0.92em; background: var(--grid); p
       </details>
     </div>
   </section>
+
+  <!-- INVITES (data lives in a private repo, never in this public one) -->
+  <section class="view" id="view-invites" hidden>
+    <div class="panel" id="invHead"></div>
+    <div id="invBody"></div>
+  </section>
 </div>
 
 <script>
@@ -487,7 +506,7 @@ async function flush() {
 }
 
 // ---------- routing ----------
-const VIEWS = ["sprint", "week", "prob", "progress"];
+const VIEWS = ["sprint", "week", "prob", "progress", "invites"];
 function route() {
   const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "sprint";
   VIEWS.forEach((x) => { $("view-" + x).hidden = x !== v; });
@@ -863,6 +882,125 @@ $("connectBtn").addEventListener("click", async () => {
 });
 $("disconnectBtn").addEventListener("click", () => { token = ""; store.set("prep.token", ""); renderDevice(); setBadge(); $("tokenNote").textContent = "Token removed from this device."; $("tokenNote").className = "note"; });
 
+
+// ---------- invites: private repo, token required ----------
+const INV_REPO = "saf17e/prep-log-invites";
+const INV_FILE = "invites.json";
+let INV = store.get("prep.inv", null);
+const invNet = { error: null, saving: false, loaded: false };
+const TPL = {
+  A: { name: "A · India junior (IIT/BITS/NIT)", text: "Hi [Name], thanks for connecting! I'm a second-year CS student at Nirma, working towards SWE and quant dev internships at firms like [Firm]. I saw you joined [Firm] as [role] straight from [college]. What did you focus on in second and third year that helped most? Any quick advice would mean a lot." },
+  B: { name: "B · Singapore junior/intern (NUS/NTU)", text: "Hi [Name], thanks for connecting! I'm a second-year CS student at Nirma, and our AUV team is competing at SAUVC in Singapore this February. I'm aiming for SWE internships in Singapore in 2028 and saw your internship at [Firm]. How did you prepare for it, and what would you do differently? If you're free for a quick coffee while I'm in town, I'd love that too." },
+  C: { name: "C · SWE to quant dev path", text: "Hi [Name], thanks for connecting! I'm a second-year CS student at Nirma and lead software for our university's AUV team (C++, state estimation, sensor integration). I'm trying to work out how to go from general SWE to quant dev roles. What was your path into [Firm], and what would you focus on if you were in second year again?" },
+  D: { name: "D · Fallback / traders", text: "Hi [Name], thanks for connecting! I'm a second-year CS student at Nirma, aiming for SWE and quant dev internships in 2028. I saw you're at [Firm] and would love to hear how you got there. Any advice on what to focus on over the next year would help a lot." },
+  F: { name: "Follow-up (once, 7-10 days)", text: "Hi [Name], just bringing this back up in case it got buried. Even a one-line reply would help. Thanks either way!" },
+};
+const invToday = () => new Date().toISOString().slice(0, 10);
+const invDays = (d) => d ? Math.floor((Date.now() - new Date(d + "T00:00:00").getTime()) / 864e5) : null;
+function invParts(i) {
+  const segs = String(i.role_signal || "").split(";").map((x) => x.trim()).filter(Boolean);
+  const m = String(i.role_signal || "").match(/IISc|IIIT[A-Za-z]*|IIT[ -]?[A-Za-z]*|BITS[ A-Za-z]*|NIT[ A-Za-z]*|NUS|NTU|SMU|DTU|NSIT|Nirma/);
+  return { first: String(i.name || "").trim().split(/\s+/)[0], role: segs[0] || "", college: m ? m[0].trim() : "" };
+}
+function invFill(key, i) {
+  const p = invParts(i);
+  return TPL[key].text.replaceAll("[Name]", p.first).replaceAll("[Firm]", i.firm).replaceAll("[role]", p.role || "[role]").replaceAll("[college]", p.college || "[college]");
+}
+function invRec(i) {
+  const p = invParts(i);
+  const dev = /swe|software|engineer|developer|\bdev\b|technolog/i.test(i.role_signal || "") && !/fpga|hardware|trader|trading/i.test(i.role_signal || "");
+  if (/singapore/i.test(i.location || "")) return "B";
+  if (i.tier === "A" && p.college && dev) return "A";
+  if (dev) return "C";
+  return "D";
+}
+async function ghr(repo, path, opts = {}) {
+  const r = await fetch("https://api.github.com/repos/" + repo + path, {
+    ...opts, cache: "no-store",
+    headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + token, ...(opts.body ? { "Content-Type": "application/json" } : {}) },
+  });
+  if (!r.ok) { const e = new Error("GitHub " + r.status); e.status = r.status; throw e; }
+  return r.json();
+}
+async function refreshInv() {
+  if (!token) { renderInvites(); return; }
+  try {
+    const j = await ghr(INV_REPO, "/contents/" + INV_FILE);
+    INV = JSON.parse(b64d(j.content)); store.set("prep.inv", INV);
+    invNet.error = null; invNet.loaded = true;
+  } catch (e) { invNet.error = e; }
+  renderInvites();
+}
+// Apply fn locally right away, then re-apply it on the latest file so edits made by the Gmail sync are not lost.
+async function invWrite(msg, fn) {
+  if (!token || !INV) return;
+  fn(INV); store.set("prep.inv", INV);
+  invNet.saving = true; renderInvites();
+  for (let a = 0; a < 4; a++) {
+    try {
+      const j = await ghr(INV_REPO, "/contents/" + INV_FILE);
+      const data = JSON.parse(b64d(j.content));
+      fn(data); data.updatedAt = Date.now();
+      await ghr(INV_REPO, "/contents/" + INV_FILE, { method: "PUT", body: JSON.stringify({ message: msg, content: b64e(JSON.stringify(data, null, 1)), sha: j.sha }) });
+      INV = data; store.set("prep.inv", INV); invNet.error = null; break;
+    } catch (e) { invNet.error = e; if (e.status !== 409 && e.status !== 422) break; }
+  }
+  invNet.saving = false; renderInvites();
+}
+function invCard(i, mode) {
+  const rec = invRec(i);
+  const keys = mode === "followup" ? ["F"] : mode === "ready" ? [rec, ...["A", "B", "C", "D"].filter((k) => k !== rec)] : [];
+  const tpls = keys.map((k) => `<div class="inv-tpl" data-id="${i.id}" data-t="${k}">
+      <div class="lab">${esc(TPL[k].name)}${k === rec && mode === "ready" ? " · recommended" : ""}</div>
+      <textarea>${esc(invFill(k, i))}</textarea>
+      <div class="row"><button data-act="copy">Copy</button><button class="primary" data-act="messaged">Copied it and sent ✓</button></div>
+    </div>`).join("");
+  const acts = [];
+  if (i.profile_url) acts.push(`<a href="${esc(i.profile_url)}" target="_blank" rel="noopener">Open LinkedIn ↗</a>`);
+  if (i.status === "to_send") acts.push(`<button data-act="sent" data-id="${i.id}">Mark invite sent</button>`);
+  if (i.status === "sent") acts.push(`<button data-act="connected" data-id="${i.id}">Mark connected</button>`);
+  if (i.status === "messaged") acts.push(`<button data-act="replied" data-id="${i.id}">They replied</button>`);
+  const when = i.status === "messaged" && i.date_messaged ? ` · messaged ${invDays(i.date_messaged)}d ago` : i.status === "sent" && i.date_sent ? ` · sent ${invDays(i.date_sent)}d ago` : i.status === "connected" && i.date_accepted ? ` · accepted ${i.date_accepted}` : "";
+  const open = mode === "ready" || mode === "followup" ? " open" : "";
+  return `<details class="inv-card"${open}><summary><span class="nm">${esc(i.name)}</span><span class="tag">${esc(i.firm)}</span><span class="tag">${esc(i.tier)}</span><span class="meta">${esc(i.role_signal || "")}${esc(i.location ? " · " + i.location : "")}${esc(when)}</span></summary>
+    ${i.notes ? `<div class="meta">Note: ${esc(i.notes)}</div>` : ""}
+    <div class="row">${acts.join(" ")}</div>${tpls}</details>`;
+}
+function renderInvites() {
+  const head = $("invHead"), body = $("invBody");
+  if (!head) return;
+  if (!token) { head.innerHTML = "<h2>Invites</h2><p class=\"note\">Connect this device with your GitHub token (Device section under Progress). The token must also include the private repo <code>" + INV_REPO + "</code>.</p>"; body.innerHTML = ""; return; }
+  if (!INV) { head.innerHTML = "<h2>Invites</h2><p class=\"note\">" + (invNet.error ? "Could not load invites (" + esc(invNet.error.message) + "). Check the token covers " + INV_REPO + "." : "Loading…") + "</p>"; body.innerHTML = ""; return; }
+  const L = INV.invites;
+  const by = (f) => L.filter(f);
+  const ready = by((i) => i.status === "connected");
+  const due = by((i) => i.status === "messaged" && !i.replied && (invDays(i.date_messaged) ?? 0) >= 7);
+  const dueIds = new Set(due.map((i) => i.id));
+  const waiting = by((i) => i.status === "sent");
+  const messaged = by((i) => i.status === "messaged" && !dueIds.has(i.id));
+  const toSend = by((i) => i.status === "to_send");
+  const skipped = by((i) => /^skipped/.test(i.status));
+  head.innerHTML = `<h2>Invites</h2><div class="row"><span class="tag rec">${ready.length} ready to message</span><span class="tag">${due.length} follow-up due</span><span class="tag">${waiting.length} waiting</span><span class="tag">${toSend.length} to send</span><span class="meta">${invNet.saving ? "saving…" : invNet.error ? "sync error: " + esc(invNet.error.message) : "synced " + (INV.updatedAt ? ago(INV.updatedAt) : "")}</span></div>`;
+  const group = (title, list, mode) => list.length ? `<div class="inv-group"><h2>${title} (${list.length})</h2>${list.map((i) => invCard(i, mode)).join("")}</div>` : "";
+  body.innerHTML = group("Ready to message", ready, "ready") + group("Follow-up due", due, "followup") + group("Waiting for accept", waiting, "wait") + group("Messaged", messaged, "wait") + group("To send", toSend, "wait") +
+    (skipped.length ? `<details class="inv-group"><summary class="meta">Skipped (${skipped.length})</summary>${skipped.map((i) => invCard(i, "wait")).join("")}</details>` : "");
+}
+$("invBody").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const act = b.dataset.act, box = b.closest(".inv-tpl");
+  if (act === "copy") {
+    try { await navigator.clipboard.writeText(box.querySelector("textarea").value); b.textContent = "Copied ✓"; setTimeout(() => { b.textContent = "Copy"; }, 1500); } catch { box.querySelector("textarea").select(); }
+    return;
+  }
+  const id = Number(box ? box.dataset.id : b.dataset.id);
+  const t = box ? box.dataset.t : null;
+  const set = (patch, msg) => invWrite(msg, (d) => { const r = d.invites.find((x) => x.id === id); if (r) Object.assign(r, patch); });
+  if (act === "messaged") set(t === "F" ? { date_messaged: invToday(), message_used: "followup" } : { status: "messaged", date_messaged: invToday(), message_used: t }, "Messaged #" + id);
+  else if (act === "connected") set({ status: "connected", date_accepted: invToday() }, "Connected #" + id);
+  else if (act === "sent") set({ status: "sent", date_sent: invToday() }, "Invite sent #" + id);
+  else if (act === "replied") set({ replied: true }, "Replied #" + id);
+});
+
 // ---------- badge + boot ----------
 function setBadge() {
   const b = $("badge");
@@ -873,10 +1011,10 @@ function setBadge() {
   else text = STATS?.checkedAt ? "synced " + ago(STATS.checkedAt) : "connected";
   b.textContent = text; b.classList.toggle("warn", warn);
 }
-function renderAll() { renderRuns(); renderWeek(); renderProb(); renderProgress(); renderDevice(); setBadge(); }
+function renderAll() { renderRuns(); renderWeek(); renderProb(); renderProgress(); renderDevice(); setBadge(); renderInvites(); }
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-paintCfg(); route(); renderAll(); refresh();
+paintCfg(); route(); renderAll(); refresh(); refreshInv();
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !run) refresh(); });
 addEventListener("online", () => { if (!run) refresh(); });
 setInterval(() => { if (!run && !document.hidden) refresh(); }, 5 * 60 * 1000);

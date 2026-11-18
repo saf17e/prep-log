@@ -1,6 +1,6 @@
 // Offline shell: the page, icons and fonts are cached so the app opens with no network.
 // Progress data never goes through here; it lives in localStorage and syncs from the page.
-const CACHE = "prep-log-v1";
+const CACHE = "prep-log-v2";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
